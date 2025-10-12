@@ -13,5 +13,5 @@ sudo apt install ./pomodoro-timer_1.0.0_amd64.deb
 
 ```
 
-Search for the app in the app list.
+Search for the app in the app list after.
 
