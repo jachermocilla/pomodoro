@@ -65,7 +65,7 @@ class PomodoroTimer:
             bg="#4caf50",
             fg="white",
             width=6,
-            height=2,
+            height=1,
             cursor="hand2"
         )
         self.start_button.grid(row=0, column=0, padx=2)
@@ -79,7 +79,7 @@ class PomodoroTimer:
             bg="#ff9800",
             fg="white",
             width=6,
-            height=2,
+            height=1,
             cursor="hand2"
         )
         self.reset_button.grid(row=0, column=1, padx=2)
