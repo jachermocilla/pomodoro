@@ -141,7 +141,7 @@ class PomodoroTimer:
             self.session_label.config(text="Work", fg="#d32f2f")
             self.is_work_session = True
         
-        self.start_button.config(text="▶", bg="#4caf50")
+        self.start_button.config(text="strt", bg="#4caf50")
         self.update_display()
         self.root.bell()
         
