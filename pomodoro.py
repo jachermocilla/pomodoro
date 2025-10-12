@@ -6,7 +6,7 @@ class PomodoroTimer:
     def __init__(self, root):
         self.root = root
         self.root.title("Pomodoro")
-        self.root.geometry("200x150")
+        self.root.geometry("210x150")
         self.root.resizable(False, False)
         
         # Timer settings (in seconds)
@@ -84,6 +84,20 @@ class PomodoroTimer:
         )
         self.reset_button.grid(row=0, column=1, padx=2)
         
+        # Settings button
+        self.settings_button = tk.Button(
+            button_frame,
+            text="⚙",
+            command=self.open_settings,
+            font=("Arial", 9),
+            bg="#2196f3",
+            fg="white",
+            width=3,
+            height=1,
+            cursor="hand2"
+        )
+        self.settings_button.grid(row=0, column=2, padx=2)
+        
     def toggle_timer(self):
         if self.is_running:
             self.pause_timer()
@@ -151,15 +165,85 @@ class PomodoroTimer:
         self.timer_label.config(text=f"{minutes:02d}:{seconds:02d}")
         
         # Update count label
-        current = self.pomodoro_count % 4 if self.pomodoro_count % 4 != 0 else 4
-        if not self.is_work_session and self.pomodoro_count % 4 == 0:
-            current = 4
-        elif not self.is_work_session:
-            current = self.pomodoro_count % 4
-        else:
-            current = (self.pomodoro_count % 4)
-        
         self.count_label.config(text=f"{self.pomodoro_count % 4}/4")
+        
+    def open_settings(self):
+        settings_window = tk.Toplevel(self.root)
+        settings_window.title("Settings")
+        settings_window.geometry("240x150")
+        settings_window.resizable(False, False)
+        settings_window.transient(self.root)
+        settings_window.grab_set()
+        
+        # Work duration
+        tk.Label(settings_window, text="Work Duration (minutes):", font=("Arial", 9)).grid(row=0, column=0, padx=10, pady=3, sticky="w")
+        work_var = tk.StringVar(value=str(self.work_duration // 60))
+        work_entry = tk.Entry(settings_window, textvariable=work_var, width=8, font=("Arial", 9))
+        work_entry.grid(row=0, column=1, padx=10, pady=3)
+        
+        # Short break duration
+        tk.Label(settings_window, text="Short Break (minutes):", font=("Arial", 9)).grid(row=1, column=0, padx=10, pady=3, sticky="w")
+        short_var = tk.StringVar(value=str(self.short_break // 60))
+        short_entry = tk.Entry(settings_window, textvariable=short_var, width=8, font=("Arial", 9))
+        short_entry.grid(row=1, column=1, padx=10, pady=3)
+        
+        # Long break duration
+        tk.Label(settings_window, text="Long Break (minutes):", font=("Arial", 9)).grid(row=2, column=0, padx=10, pady=3, sticky="w")
+        long_var = tk.StringVar(value=str(self.long_break // 60))
+        long_entry = tk.Entry(settings_window, textvariable=long_var, width=8, font=("Arial", 9))
+        long_entry.grid(row=2, column=1, padx=10, pady=3)
+        
+        def save_settings():
+            try:
+                work_mins = int(work_var.get())
+                short_mins = int(short_var.get())
+                long_mins = int(long_var.get())
+                
+                if work_mins <= 0 or short_mins <= 0 or long_mins <= 0:
+                    raise ValueError("Values must be positive")
+                
+                self.work_duration = work_mins * 60
+                self.short_break = short_mins * 60
+                self.long_break = long_mins * 60
+                
+                # Reset timer to apply new settings
+                self.reset_timer()
+                
+                settings_window.destroy()
+            except ValueError:
+                error_label.config(text="Please enter valid positive numbers")
+        
+        # Error label
+        error_label = tk.Label(settings_window, text="", font=("Arial", 8), fg="red")
+        error_label.grid(row=3, column=0, columnspan=2, pady=5)
+        
+        # Button frame
+        button_frame = tk.Frame(settings_window)
+        button_frame.grid(row=4, column=0, columnspan=2, pady=1)
+        
+        save_button = tk.Button(
+            button_frame,
+            text="Save",
+            command=save_settings,
+            font=("Arial", 9),
+            bg="#4caf50",
+            fg="white",
+            width=8,
+            cursor="hand2"
+        )
+        save_button.pack(side="left", padx=5)
+        
+        cancel_button = tk.Button(
+            button_frame,
+            text="Cancel",
+            command=settings_window.destroy,
+            font=("Arial", 9),
+            bg="#f44336",
+            fg="white",
+            width=8,
+            cursor="hand2"
+        )
+        cancel_button.pack(side="left", padx=5)
         
 def main():
     root = tk.Tk()
