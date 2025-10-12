@@ -5,7 +5,7 @@ I just want a simple Pomodoro timer for my Ubuntu box so here it is.
 `gnome-pomodoro` takes up too much desktop space and is too 'complex' for my needs :)
 
 ## Use
-On the terminal: 
+Open a terminal and copy and paste the commands below.  
 
 ```bash
 wget https://github.com/jachermocilla/pomodoro/releases/download/v1.0.0/pomodoro-timer_1.0.0_amd64.deb
