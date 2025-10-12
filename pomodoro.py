@@ -6,7 +6,7 @@ class PomodoroTimer:
     def __init__(self, root):
         self.root = root
         self.root.title("Pomodoro")
-        self.root.geometry("200x120")
+        self.root.geometry("200x150")
         self.root.resizable(False, False)
         
         # Timer settings (in seconds)
