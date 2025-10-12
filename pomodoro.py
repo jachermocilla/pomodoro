@@ -59,13 +59,13 @@ class PomodoroTimer:
         # Start/Pause button
         self.start_button = tk.Button(
             button_frame,
-            text="strt",
+            text="Start",
             command=self.toggle_timer,
-            font=("Arial", 10, "bold"),
+            font=("Arial", 9),
             bg="#4caf50",
             fg="white",
-            width=4,
-            height=1,
+            width=6,
+            height=2,
             cursor="hand2"
         )
         self.start_button.grid(row=0, column=0, padx=2)
@@ -73,13 +73,13 @@ class PomodoroTimer:
         # Reset button
         self.reset_button = tk.Button(
             button_frame,
-            text="rst",
+            text="Reset",
             command=self.reset_timer,
-            font=("Arial", 10, "bold"),
+            font=("Arial", 9),
             bg="#ff9800",
             fg="white",
-            width=4,
-            height=1,
+            width=6,
+            height=2,
             cursor="hand2"
         )
         self.reset_button.grid(row=0, column=1, padx=2)
@@ -92,12 +92,12 @@ class PomodoroTimer:
             
     def start_timer(self):
         self.is_running = True
-        self.start_button.config(text="⏸", bg="#f44336")
+        self.start_button.config(text="Pause", bg="#f44336")
         self.countdown()
         
     def pause_timer(self):
         self.is_running = False
-        self.start_button.config(text="▶", bg="#4caf50")
+        self.start_button.config(text="Start", bg="#4caf50")
         if self.timer_id:
             self.root.after_cancel(self.timer_id)
             
@@ -108,8 +108,8 @@ class PomodoroTimer:
         
         self.is_work_session = True
         self.time_left = self.work_duration
-        self.start_button.config(text="▶", bg="#4caf50")
-        self.session_label.config(text="🍅 Work", fg="#d32f2f")
+        self.start_button.config(text="Start", bg="#4caf50")
+        self.session_label.config(text="Work", fg="#d32f2f")
         self.update_display()
         
     def countdown(self):
@@ -141,7 +141,7 @@ class PomodoroTimer:
             self.session_label.config(text="Work", fg="#d32f2f")
             self.is_work_session = True
         
-        self.start_button.config(text="strt", bg="#4caf50")
+        self.start_button.config(text="Start", bg="#4caf50")
         self.update_display()
         self.root.bell()
         
