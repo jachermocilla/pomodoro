@@ -9,7 +9,6 @@ On the terminal:
 
 ```bash
 wget https://github.com/jachermocilla/pomodoro/releases/download/v1.0.0/pomodoro-timer_1.0.0_amd64.deb
-
 sudo apt install ./pomodoro-timer_1.0.0_amd64.deb
 
 ```
