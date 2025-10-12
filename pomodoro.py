@@ -129,16 +129,16 @@ class PomodoroTimer:
             # Determine break type
             if self.pomodoro_count % 4 == 0:
                 self.time_left = self.long_break
-                self.session_label.config(text="☕ Long Break", fg="#7b1fa2")
+                self.session_label.config(text="Long Break", fg="#7b1fa2")
             else:
                 self.time_left = self.short_break
-                self.session_label.config(text="☕ Break", fg="#388e3c")
+                self.session_label.config(text="Break", fg="#388e3c")
             
             self.is_work_session = False
         else:
             # Switch back to work session
             self.time_left = self.work_duration
-            self.session_label.config(text="🍅 Work", fg="#d32f2f")
+            self.session_label.config(text="Work", fg="#d32f2f")
             self.is_work_session = True
         
         self.start_button.config(text="▶", bg="#4caf50")
