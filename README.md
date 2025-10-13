@@ -8,7 +8,7 @@ I just want a simple Pomodoro timer for my Ubuntu box so here it is.
 Open a terminal then copy and paste the commands below.  
 
 ```bash
-wget https://github.com/jachermocilla/pomodoro/releases/download/v1.0.1/pomodoro-timer_1.0.1_amd64.deb
+wget https://github.com/jachermocilla/pomodoro/releases/latest/pomodoro-timer_1.0.1_amd64.deb
 sudo apt install ./pomodoro-timer_1.0.1_amd64.deb
 
 ```
