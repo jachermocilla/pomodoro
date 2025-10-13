@@ -1,0 +1,4 @@
+build/
+debian_package/
+dist/
+pomodoro-timer.spec
