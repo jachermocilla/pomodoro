@@ -20,9 +20,15 @@ class PomodoroTimer:
         self.is_work_session = True
         self.pomodoro_count = 0
         self.timer_id = None
+        self.is_blinking = False
+        self.blink_state = False
+        self.original_bg = None
         
         self.setup_ui()
         self.update_display()
+        
+        # Bind click event to stop blinking
+        self.root.bind("<Button-1>", self.stop_blinking)
         
     def setup_ui(self):
         # Session type label (compact)
@@ -159,6 +165,11 @@ class PomodoroTimer:
         self.update_display()
         self.root.bell()
         
+        # Start continuous blinking effect
+        self.is_blinking = True
+        self.original_bg = self.root.cget('bg')
+        self.blink_window()
+        
     def update_display(self):
         minutes = self.time_left // 60
         seconds = self.time_left % 60
@@ -166,6 +177,25 @@ class PomodoroTimer:
         
         # Update count label
         self.count_label.config(text=f"{self.pomodoro_count % 4}/4")
+    
+    def blink_window(self):
+        """Blink the window background with a catchy color continuously"""
+        if self.is_blinking:
+            if self.blink_state:
+                # Set to bright attention-grabbing color
+                self.root.config(bg="#FF6B35")  # Bright orange
+            else:
+                # Return to original color
+                self.root.config(bg=self.original_bg)
+            
+            self.blink_state = not self.blink_state
+            self.root.after(300, self.blink_window)  # Blink every 300ms
+    
+    def stop_blinking(self, event=None):
+        """Stop the blinking effect when user clicks"""
+        if self.is_blinking:
+            self.is_blinking = False
+            self.root.config(bg=self.original_bg)
         
     def open_settings(self):
         settings_window = tk.Toplevel(self.root)
