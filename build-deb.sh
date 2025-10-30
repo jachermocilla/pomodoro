@@ -3,7 +3,7 @@ set -e
 
 # Configuration
 APP_NAME="pomodoro-timer"
-APP_VERSION="1.0.2"
+APP_VERSION="1.0.3"
 MAINTAINER="JAC Hermocilla <jachermocilla@gmail.com>"
 DESCRIPTION="A simple and elegant Pomodoro timer application"
 ARCH="amd64"
@@ -185,7 +185,7 @@ EOF
 # Compress changelog
 gzip -9 -n "${PKG_DIR}/usr/share/doc/${APP_NAME}/changelog.Debian"
 
-# Create postinst script (optional)
+# Create postinst script
 cat > "${PKG_DIR}/DEBIAN/postinst" << 'EOF'
 #!/bin/bash
 set -e
@@ -195,11 +195,36 @@ if command -v update-desktop-database &> /dev/null; then
     update-desktop-database -q
 fi
 
+# Create desktop shortcut for all users
+DESKTOP_FILE="/usr/share/applications/pomodoro-timer.desktop"
+if [ -f "$DESKTOP_FILE" ]; then
+    # For each user's Desktop directory
+    for user_home in /home/*; do
+        if [ -d "$user_home/Desktop" ]; then
+            username=$(basename "$user_home")
+            cp "$DESKTOP_FILE" "$user_home/Desktop/"
+            chown "$username:$username" "$user_home/Desktop/pomodoro-timer.desktop"
+            chmod +x "$user_home/Desktop/pomodoro-timer.desktop"
+            # Mark as trusted for Ubuntu 20.04+
+            if command -v gio &> /dev/null; then
+                sudo -u "$username" gio set "$user_home/Desktop/pomodoro-timer.desktop" metadata::trusted true 2>/dev/null || true
+            fi
+        fi
+    done
+    
+    # Also create in /etc/skel for new users
+    if [ -d "/etc/skel" ]; then
+        mkdir -p "/etc/skel/Desktop"
+        cp "$DESKTOP_FILE" "/etc/skel/Desktop/"
+        chmod +x "/etc/skel/Desktop/pomodoro-timer.desktop"
+    fi
+fi
+
 exit 0
 EOF
 chmod 755 "${PKG_DIR}/DEBIAN/postinst"
 
-# Create postrm script (optional)
+# Create postrm script
 cat > "${PKG_DIR}/DEBIAN/postrm" << 'EOF'
 #!/bin/bash
 set -e
@@ -207,6 +232,21 @@ set -e
 # Update desktop database if available
 if command -v update-desktop-database &> /dev/null; then
     update-desktop-database -q
+fi
+
+# Remove desktop shortcuts on purge
+if [ "$1" = "purge" ]; then
+    # Remove from user desktops
+    for user_home in /home/*; do
+        if [ -f "$user_home/Desktop/pomodoro-timer.desktop" ]; then
+            rm -f "$user_home/Desktop/pomodoro-timer.desktop"
+        fi
+    done
+    
+    # Remove from /etc/skel
+    if [ -f "/etc/skel/Desktop/pomodoro-timer.desktop" ]; then
+        rm -f "/etc/skel/Desktop/pomodoro-timer.desktop"
+    fi
 fi
 
 exit 0
