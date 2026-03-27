@@ -3,7 +3,7 @@ set -e
 
 # Configuration
 APP_NAME="pomodoro-timer"
-APP_VERSION="1.0.4"
+APP_VERSION="1.0.5"
 MAINTAINER="JAC Hermocilla <jachermocilla@gmail.com>"
 DESCRIPTION="A simple and elegant Pomodoro timer application"
 ARCH="amd64"

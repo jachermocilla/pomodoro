@@ -8,6 +8,8 @@ class PomodoroTimer:
         self.root.title("Pomodoro")
         self.root.geometry("115x58+0+0")
         self.root.resizable(False, False)
+        self.root.overrideredirect(True)
+        self.root.attributes("-topmost", True)
         
         # Timer settings (in seconds)
         self.work_duration = 25 * 60
@@ -29,6 +31,19 @@ class PomodoroTimer:
         
         # Bind click event to stop blinking
         self.root.bind("<Button-1>", self.stop_blinking)
+
+        # Drag to move (since title bar is removed)
+        self.root.bind("<ButtonPress-1>", self.start_drag)
+        self.root.bind("<B1-Motion>", self.do_drag)
+
+    def start_drag(self, event):
+        self._drag_x = event.x
+        self._drag_y = event.y
+
+    def do_drag(self, event):
+        x = self.root.winfo_x() + event.x - self._drag_x
+        y = self.root.winfo_y() + event.y - self._drag_y
+        self.root.geometry(f"+{x}+{y}")
         
     def setup_ui(self):
         # Main frame with two columns
@@ -67,6 +82,21 @@ class PomodoroTimer:
             fg="#666666",
         )
         self.count_label.pack(side="left")
+
+        self.exit_button = tk.Button(
+            info_frame,
+            text="✕",
+            command=self.root.destroy,
+            font=("Arial", 6),
+            fg="#999999",
+            bg=self.root.cget("bg"),
+            relief="flat",
+            bd=0,
+            padx=2,
+            pady=0,
+            cursor="hand2"
+        )
+        self.exit_button.pack(side="left", padx=(3, 0))
 
         # Right column: stacked buttons
         button_frame = tk.Frame(main_frame)
