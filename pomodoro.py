@@ -28,21 +28,19 @@ class PomodoroTimer:
         
         self.setup_ui()
         self.update_display()
-        
-        # Bind click event to stop blinking
-        self.root.bind("<Button-1>", self.stop_blinking)
 
-        # Drag to move (since title bar is removed)
-        self.root.bind("<ButtonPress-1>", self.start_drag)
+        # Drag to move + stop blinking on any click anywhere
+        self.root.bind_all("<ButtonPress-1>", self.start_drag)
         self.root.bind("<B1-Motion>", self.do_drag)
 
     def start_drag(self, event):
-        self._drag_x = event.x
-        self._drag_y = event.y
+        self.stop_blinking()
+        self._drag_x = event.x_root - self.root.winfo_x()
+        self._drag_y = event.y_root - self.root.winfo_y()
 
     def do_drag(self, event):
-        x = self.root.winfo_x() + event.x - self._drag_x
-        y = self.root.winfo_y() + event.y - self._drag_y
+        x = event.x_root - self._drag_x
+        y = event.y_root - self._drag_y
         self.root.geometry(f"+{x}+{y}")
         
     def setup_ui(self):
@@ -201,10 +199,11 @@ class PomodoroTimer:
             self.root.after(300, self.blink_window)  # Blink every 300ms
     
     def stop_blinking(self, event=None):
-        """Stop the blinking effect when user clicks"""
+        """Stop the blinking effect"""
         if self.is_blinking:
             self.is_blinking = False
-            self.root.config(bg=self.original_bg)
+            if self.original_bg:
+                self.root.config(bg=self.original_bg)
         
     def open_settings(self):
         settings_window = tk.Toplevel(self.root)
