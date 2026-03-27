@@ -6,7 +6,7 @@ class PomodoroTimer:
     def __init__(self, root):
         self.root = root
         self.root.title("Pomodoro")
-        self.root.geometry("210x150")
+        self.root.geometry("115x58+0+0")
         self.root.resizable(False, False)
         
         # Timer settings (in seconds)
@@ -31,78 +31,57 @@ class PomodoroTimer:
         self.root.bind("<Button-1>", self.stop_blinking)
         
     def setup_ui(self):
-        # Session type label (compact)
-        self.session_label = tk.Label(
-            self.root,
-            text="Work",
-            font=("Arial", 10, "bold"),
-            fg="#d32f2f"
-        )
-        self.session_label.pack(pady=(8, 2))
-        
-        # Timer display
+        # Main frame with two columns
+        main_frame = tk.Frame(self.root)
+        main_frame.pack(fill="both", expand=True, padx=3, pady=3)
+
+        # Left column: timer + labels
+        left_frame = tk.Frame(main_frame)
+        left_frame.grid(row=0, column=0, sticky="nw")
+
         self.timer_label = tk.Label(
-            self.root,
+            left_frame,
             text="25:00",
-            font=("Arial", 32, "bold"),
-            fg="#000000"
+            font=("Arial", 22, "bold"),
+            fg="#000000",
+            anchor="nw"
         )
-        self.timer_label.pack(pady=2)
-        
-        # Pomodoro count (compact)
+        self.timer_label.pack(anchor="nw")
+
+        # Session + count on same row
+        info_frame = tk.Frame(left_frame)
+        info_frame.pack(anchor="w")
+
+        self.session_label = tk.Label(
+            info_frame,
+            text="Work",
+            font=("Arial", 7, "bold"),
+            fg="#d32f2f",
+        )
+        self.session_label.pack(side="left")
+
         self.count_label = tk.Label(
-            self.root,
-            text="0/4",
-            font=("Arial", 8),
-            fg="#666666"
+            info_frame,
+            text=" 0/4",
+            font=("Arial", 7),
+            fg="#666666",
         )
-        self.count_label.pack(pady=2)
-        
-        # Button frame (compact buttons)
-        button_frame = tk.Frame(self.root)
-        button_frame.pack(pady=5)
-        
-        # Start/Pause button
-        self.start_button = tk.Button(
-            button_frame,
-            text="Start",
-            command=self.toggle_timer,
-            font=("Arial", 9),
-            bg="#4caf50",
-            fg="white",
-            width=6,
-            height=1,
-            cursor="hand2"
-        )
-        self.start_button.grid(row=0, column=0, padx=2)
-        
-        # Reset button
-        self.reset_button = tk.Button(
-            button_frame,
-            text="Reset",
-            command=self.reset_timer,
-            font=("Arial", 9),
-            bg="#ff9800",
-            fg="white",
-            width=6,
-            height=1,
-            cursor="hand2"
-        )
-        self.reset_button.grid(row=0, column=1, padx=2)
-        
-        # Settings button
-        self.settings_button = tk.Button(
-            button_frame,
-            text="⚙",
-            command=self.open_settings,
-            font=("Arial", 9),
-            bg="#2196f3",
-            fg="white",
-            width=3,
-            height=1,
-            cursor="hand2"
-        )
-        self.settings_button.grid(row=0, column=2, padx=2)
+        self.count_label.pack(side="left")
+
+        # Right column: stacked buttons
+        button_frame = tk.Frame(main_frame)
+        button_frame.grid(row=0, column=1, sticky="ne", padx=(6, 0))
+
+        btn_cfg = dict(font=("Arial", 7), fg="white", width=3, height=1, padx=1, pady=0, cursor="hand2")
+
+        self.start_button = tk.Button(button_frame, text="Run", command=self.toggle_timer, bg="#4caf50", **btn_cfg)
+        self.start_button.grid(row=0, column=0, pady=0)
+
+        self.reset_button = tk.Button(button_frame, text="Rst", command=self.reset_timer, bg="#ff9800", **btn_cfg)
+        self.reset_button.grid(row=1, column=0, pady=0)
+
+        self.settings_button = tk.Button(button_frame, text="Set", command=self.open_settings, bg="#2196f3", **btn_cfg)
+        self.settings_button.grid(row=2, column=0, pady=0)
         
     def toggle_timer(self):
         if self.is_running:
@@ -112,12 +91,12 @@ class PomodoroTimer:
             
     def start_timer(self):
         self.is_running = True
-        self.start_button.config(text="Pause", bg="#f44336")
+        self.start_button.config(text="Pau", bg="#f44336")
         self.countdown()
         
     def pause_timer(self):
         self.is_running = False
-        self.start_button.config(text="Start", bg="#4caf50")
+        self.start_button.config(text="Run", bg="#4caf50")
         if self.timer_id:
             self.root.after_cancel(self.timer_id)
             
@@ -128,7 +107,7 @@ class PomodoroTimer:
         
         self.is_work_session = True
         self.time_left = self.work_duration
-        self.start_button.config(text="Start", bg="#4caf50")
+        self.start_button.config(text="Run", bg="#4caf50")
         self.session_label.config(text="Work", fg="#d32f2f")
         self.update_display()
         
@@ -161,7 +140,7 @@ class PomodoroTimer:
             self.session_label.config(text="Work", fg="#d32f2f")
             self.is_work_session = True
         
-        self.start_button.config(text="Start", bg="#4caf50")
+        self.start_button.config(text="Run", bg="#4caf50")
         self.update_display()
         self.root.bell()
         
@@ -176,7 +155,7 @@ class PomodoroTimer:
         self.timer_label.config(text=f"{minutes:02d}:{seconds:02d}")
         
         # Update count label
-        self.count_label.config(text=f"{self.pomodoro_count % 4}/4")
+        self.count_label.config(text=f" {self.pomodoro_count % 4}/4")
     
     def blink_window(self):
         """Blink the window background with a catchy color continuously"""
