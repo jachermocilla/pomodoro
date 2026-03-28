@@ -186,14 +186,16 @@ class PomodoroTimer:
         self.count_label.config(text=f" {self.pomodoro_count % 4}/4")
     
     def blink_window(self):
-        """Blink the window background with a catchy color continuously"""
+        """Blink the window background and timer text with a catchy color continuously"""
         if self.is_blinking:
             if self.blink_state:
                 # Set to bright attention-grabbing color
                 self.root.config(bg="#FF6B35")  # Bright orange
+                self.timer_label.config(fg="#FF6B35")  # Hide text (match bg)
             else:
                 # Return to original color
                 self.root.config(bg=self.original_bg)
+                self.timer_label.config(fg="#000000")  # Restore text
             
             self.blink_state = not self.blink_state
             self.root.after(300, self.blink_window)  # Blink every 300ms
@@ -204,6 +206,7 @@ class PomodoroTimer:
             self.is_blinking = False
             if self.original_bg:
                 self.root.config(bg=self.original_bg)
+            self.timer_label.config(fg="#000000")  # Ensure text is always restored
         
     def open_settings(self):
         settings_window = tk.Toplevel(self.root)
