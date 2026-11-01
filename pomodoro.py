@@ -1,37 +1,91 @@
 #!/usr/bin/env python3
+import json
+import math
+import os
+import time
 import tkinter as tk
-from tkinter import ttk
+
+CONFIG_DIR = os.path.join(
+    os.environ.get("XDG_CONFIG_HOME") or os.path.expanduser("~/.config"),
+    "pomodoro-timer",
+)
+CONFIG_FILE = os.path.join(CONFIG_DIR, "config.json")
+
+BLINK_COLOR = "#FF6B35"  # Bright orange
+
+
+def _now():
+    """Seconds on a clock that keeps counting while the machine is suspended"""
+    return time.clock_gettime(time.CLOCK_BOOTTIME)
+
 
 class PomodoroTimer:
     def __init__(self, root):
         self.root = root
         self.root.title("Pomodoro")
-        self.root.geometry("115x58+0+0")
         self.root.resizable(False, False)
         self.root.overrideredirect(True)
         self.root.attributes("-topmost", True)
-        
+
         # Timer settings (in seconds)
         self.work_duration = 25 * 60
         self.short_break = 5 * 60
         self.long_break = 15 * 60
-        
+        self.win_x = 0
+        self.win_y = 0
+        self.load_config()
+        self.root.geometry(f"115x58+{self.win_x}+{self.win_y}")
+
         # State variables
         self.time_left = self.work_duration
+        self.end_time = None
         self.is_running = False
         self.is_work_session = True
         self.pomodoro_count = 0
         self.timer_id = None
         self.is_blinking = False
         self.blink_state = False
-        self.original_bg = None
-        
+
         self.setup_ui()
         self.update_display()
 
         # Drag to move + stop blinking on any click anywhere
         self.root.bind_all("<ButtonPress-1>", self.start_drag)
         self.root.bind("<B1-Motion>", self.do_drag)
+        self.root.bind("<ButtonRelease-1>", self.end_drag)
+
+    def load_config(self):
+        try:
+            with open(CONFIG_FILE) as f:
+                cfg = json.load(f)
+            work, short, long_ = int(cfg["work"]), int(cfg["short"]), int(cfg["long"])
+            if work > 0 and short > 0 and long_ > 0:
+                self.work_duration = work * 60
+                self.short_break = short * 60
+                self.long_break = long_ * 60
+            self.win_x = int(cfg.get("x", 0))
+            self.win_y = int(cfg.get("y", 0))
+        except (OSError, ValueError, KeyError, TypeError):
+            pass  # Missing or broken config: keep defaults
+
+    def save_config(self):
+        cfg = {
+            "work": self.work_duration // 60,
+            "short": self.short_break // 60,
+            "long": self.long_break // 60,
+            "x": self.root.winfo_x(),
+            "y": self.root.winfo_y(),
+        }
+        try:
+            os.makedirs(CONFIG_DIR, exist_ok=True)
+            with open(CONFIG_FILE, "w") as f:
+                json.dump(cfg, f, indent=2)
+        except OSError:
+            pass
+
+    def quit(self):
+        self.save_config()
+        self.root.destroy()
 
     def start_drag(self, event):
         self.stop_blinking()
@@ -42,18 +96,21 @@ class PomodoroTimer:
         x = event.x_root - self._drag_x
         y = event.y_root - self._drag_y
         self.root.geometry(f"+{x}+{y}")
-        
+
+    def end_drag(self, event):
+        self.save_config()
+
     def setup_ui(self):
         # Main frame with two columns
-        main_frame = tk.Frame(self.root)
-        main_frame.pack(fill="both", expand=True, padx=3, pady=3)
+        self.main_frame = tk.Frame(self.root)
+        self.main_frame.pack(fill="both", expand=True, padx=3, pady=3)
 
         # Left column: timer + labels
-        left_frame = tk.Frame(main_frame)
-        left_frame.grid(row=0, column=0, sticky="nw")
+        self.left_frame = tk.Frame(self.main_frame)
+        self.left_frame.grid(row=0, column=0, sticky="nw")
 
         self.timer_label = tk.Label(
-            left_frame,
+            self.left_frame,
             text="25:00",
             font=("Arial", 22, "bold"),
             fg="#000000",
@@ -62,11 +119,11 @@ class PomodoroTimer:
         self.timer_label.pack(anchor="nw")
 
         # Session + count on same row
-        info_frame = tk.Frame(left_frame)
-        info_frame.pack(anchor="w")
+        self.info_frame = tk.Frame(self.left_frame)
+        self.info_frame.pack(anchor="w")
 
         self.session_label = tk.Label(
-            info_frame,
+            self.info_frame,
             text="Work",
             font=("Arial", 7, "bold"),
             fg="#d32f2f",
@@ -74,7 +131,7 @@ class PomodoroTimer:
         self.session_label.pack(side="left")
 
         self.count_label = tk.Label(
-            info_frame,
+            self.info_frame,
             text=" 0/4",
             font=("Arial", 7),
             fg="#666666",
@@ -82,9 +139,9 @@ class PomodoroTimer:
         self.count_label.pack(side="left")
 
         self.exit_button = tk.Button(
-            info_frame,
+            self.info_frame,
             text="✕",
-            command=self.root.destroy,
+            command=self.quit,
             font=("Arial", 6),
             fg="#999999",
             bg=self.root.cget("bg"),
@@ -97,7 +154,7 @@ class PomodoroTimer:
         self.exit_button.pack(side="left", padx=(3, 0))
 
         # Right column: stacked buttons
-        button_frame = tk.Frame(main_frame)
+        button_frame = tk.Frame(self.main_frame)
         button_frame.grid(row=0, column=1, sticky="ne", padx=(6, 0))
 
         btn_cfg = dict(font=("Arial", 7), fg="white", width=3, height=1, padx=1, pady=0, cursor="hand2")
@@ -110,49 +167,75 @@ class PomodoroTimer:
 
         self.settings_button = tk.Button(button_frame, text="Set", command=self.open_settings, bg="#2196f3", **btn_cfg)
         self.settings_button.grid(row=2, column=0, pady=0)
-        
+
+        # Widgets whose background flashes when a session ends
+        self.blink_widgets = [
+            self.root, self.main_frame, self.left_frame, self.info_frame,
+            self.timer_label, self.session_label, self.count_label, self.exit_button,
+        ]
+        self.original_bgs = {w: w.cget("bg") for w in self.blink_widgets}
+
     def toggle_timer(self):
         if self.is_running:
             self.pause_timer()
         else:
             self.start_timer()
-            
+
     def start_timer(self):
         self.is_running = True
+        self.end_time = _now() + self.time_left
         self.start_button.config(text="Pau", bg="#f44336")
-        self.countdown()
-        
+        self.tick()
+
     def pause_timer(self):
         self.is_running = False
         self.start_button.config(text="Run", bg="#4caf50")
         if self.timer_id:
             self.root.after_cancel(self.timer_id)
-            
+            self.timer_id = None
+        self.time_left = self.remaining()
+        self.update_display()
+
+    def remaining(self):
+        return max(0, math.ceil(self.end_time - _now()))
+
     def reset_timer(self):
         self.is_running = False
         if self.timer_id:
             self.root.after_cancel(self.timer_id)
-        
+            self.timer_id = None
+
         self.is_work_session = True
+        self.pomodoro_count = 0
         self.time_left = self.work_duration
         self.start_button.config(text="Run", bg="#4caf50")
         self.session_label.config(text="Work", fg="#d32f2f")
         self.update_display()
-        
-    def countdown(self):
-        if self.is_running and self.time_left > 0:
-            self.time_left -= 1
-            self.update_display()
-            self.timer_id = self.root.after(1000, self.countdown)
-        elif self.time_left == 0:
+
+    def tick(self):
+        if not self.is_running:
+            return
+        self.time_left = self.remaining()
+        self.update_display()
+        if self.time_left == 0:
+            self.timer_id = None
             self.timer_finished()
-            
+        else:
+            self.timer_id = self.root.after(250, self.tick)
+
+    def current_session_duration(self):
+        if self.is_work_session:
+            return self.work_duration
+        if self.pomodoro_count % 4 == 0:
+            return self.long_break
+        return self.short_break
+
     def timer_finished(self):
         self.is_running = False
-        
+
         if self.is_work_session:
             self.pomodoro_count += 1
-            
+
             # Determine break type
             if self.pomodoro_count % 4 == 0:
                 self.time_left = self.long_break
@@ -160,108 +243,130 @@ class PomodoroTimer:
             else:
                 self.time_left = self.short_break
                 self.session_label.config(text="Break", fg="#388e3c")
-            
+
             self.is_work_session = False
         else:
             # Switch back to work session
             self.time_left = self.work_duration
             self.session_label.config(text="Work", fg="#d32f2f")
             self.is_work_session = True
-        
+
         self.start_button.config(text="Run", bg="#4caf50")
         self.update_display()
         self.root.bell()
-        
+
         # Start continuous blinking effect
-        self.is_blinking = True
-        self.original_bg = self.root.cget('bg')
-        self.blink_window()
-        
+        if not self.is_blinking:
+            self.is_blinking = True
+            self.blink_state = True
+            self.blink_window()
+
     def update_display(self):
         minutes = self.time_left // 60
         seconds = self.time_left % 60
         self.timer_label.config(text=f"{minutes:02d}:{seconds:02d}")
-        
-        # Update count label
-        self.count_label.config(text=f" {self.pomodoro_count % 4}/4")
-    
+
+        # Update count label (show 4/4 during the long break)
+        n = self.pomodoro_count % 4
+        if n == 0 and self.pomodoro_count > 0 and not self.is_work_session:
+            n = 4
+        self.count_label.config(text=f" {n}/4")
+
     def blink_window(self):
         """Blink the window background and timer text with a catchy color continuously"""
         if self.is_blinking:
             if self.blink_state:
                 # Set to bright attention-grabbing color
-                self.root.config(bg="#FF6B35")  # Bright orange
-                self.timer_label.config(fg="#FF6B35")  # Hide text (match bg)
+                for w in self.blink_widgets:
+                    w.config(bg=BLINK_COLOR)
+                self.timer_label.config(fg=BLINK_COLOR)  # Hide text (match bg)
             else:
                 # Return to original color
-                self.root.config(bg=self.original_bg)
-                self.timer_label.config(fg="#000000")  # Restore text
-            
+                self.restore_colors()
+
             self.blink_state = not self.blink_state
             self.root.after(300, self.blink_window)  # Blink every 300ms
-    
+
+    def restore_colors(self):
+        for w, bg in self.original_bgs.items():
+            w.config(bg=bg)
+        self.timer_label.config(fg="#000000")
+
     def stop_blinking(self, event=None):
         """Stop the blinking effect"""
         if self.is_blinking:
             self.is_blinking = False
-            if self.original_bg:
-                self.root.config(bg=self.original_bg)
-            self.timer_label.config(fg="#000000")  # Ensure text is always restored
-        
+            self.restore_colors()  # Ensure text is always restored
+
     def open_settings(self):
         settings_window = tk.Toplevel(self.root)
         settings_window.title("Settings")
-        settings_window.geometry("240x150")
         settings_window.resizable(False, False)
+
+        # Place the dialog just below the widget, kept on screen
+        width, height = 240, 150
+        self.root.update_idletasks()
+        x = self.root.winfo_x()
+        y = self.root.winfo_y() + self.root.winfo_height() + 4
+        x = max(0, min(x, self.root.winfo_screenwidth() - width))
+        if y + height > self.root.winfo_screenheight():
+            y = max(0, self.root.winfo_y() - height - 4)
+        settings_window.geometry(f"{width}x{height}+{x}+{y}")
+
         settings_window.transient(self.root)
-        settings_window.grab_set()
-        
+        settings_window.attributes("-topmost", True)
+        settings_window.lift()
+
         # Work duration
         tk.Label(settings_window, text="Work Duration (minutes):", font=("Arial", 9)).grid(row=0, column=0, padx=10, pady=3, sticky="w")
         work_var = tk.StringVar(value=str(self.work_duration // 60))
         work_entry = tk.Entry(settings_window, textvariable=work_var, width=8, font=("Arial", 9))
         work_entry.grid(row=0, column=1, padx=10, pady=3)
-        
+
         # Short break duration
         tk.Label(settings_window, text="Short Break (minutes):", font=("Arial", 9)).grid(row=1, column=0, padx=10, pady=3, sticky="w")
         short_var = tk.StringVar(value=str(self.short_break // 60))
         short_entry = tk.Entry(settings_window, textvariable=short_var, width=8, font=("Arial", 9))
         short_entry.grid(row=1, column=1, padx=10, pady=3)
-        
+
         # Long break duration
         tk.Label(settings_window, text="Long Break (minutes):", font=("Arial", 9)).grid(row=2, column=0, padx=10, pady=3, sticky="w")
         long_var = tk.StringVar(value=str(self.long_break // 60))
         long_entry = tk.Entry(settings_window, textvariable=long_var, width=8, font=("Arial", 9))
         long_entry.grid(row=2, column=1, padx=10, pady=3)
-        
+
         def save_settings():
             try:
                 work_mins = int(work_var.get())
                 short_mins = int(short_var.get())
                 long_mins = int(long_var.get())
-                
+
                 if work_mins <= 0 or short_mins <= 0 or long_mins <= 0:
                     raise ValueError("Values must be positive")
-                
+
                 self.work_duration = work_mins * 60
                 self.short_break = short_mins * 60
                 self.long_break = long_mins * 60
-                
-                # Reset timer to apply new settings
-                self.reset_timer()
-                
+
+                # A running session keeps its countdown; new lengths apply
+                # from the next session. An idle one picks up its new length.
+                if not self.is_running:
+                    self.time_left = self.current_session_duration()
+                    self.update_display()
+
+                self.save_config()
                 settings_window.destroy()
             except ValueError:
                 error_label.config(text="Please enter valid positive numbers")
-        
+
         # Error label
         error_label = tk.Label(settings_window, text="", font=("Arial", 8), fg="red")
         error_label.grid(row=3, column=0, columnspan=2, pady=5)
-        
+
         # Button frame
         button_frame = tk.Frame(settings_window)
         button_frame.grid(row=4, column=0, columnspan=2, pady=1)
-        
+
         save_button = tk.Button(
             button_frame,
             text="Save",
@@ -273,7 +378,7 @@ class PomodoroTimer:
             cursor="hand2"
         )
         save_button.pack(side="left", padx=5)
-        
+
         cancel_button = tk.Button(
             button_frame,
             text="Cancel",
@@ -285,7 +390,11 @@ class PomodoroTimer:
             cursor="hand2"
         )
         cancel_button.pack(side="left", padx=5)
-        
+
+        settings_window.wait_visibility()
+        settings_window.grab_set()
+        work_entry.focus_set()
+
 def main():
     root = tk.Tk()
     app = PomodoroTimer(root)
